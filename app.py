@@ -36,9 +36,9 @@ def edit_labels(df, selected_indices):
     return df
 
 # Streamlit app
-st.title("🧠 2D Data Labeling & Clustering Tool")
+st.title("2D Data Labeling Tool")
 
-uploaded_file = st.file_uploader("📤 Upload a CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
@@ -51,8 +51,7 @@ if uploaded_file:
     # Convert pandas 'string[python]' dtype to 'object' for compatibility
     for col in df.select_dtypes(include='string').columns:
         df[col] = df[col].astype(str)
-    # df['Time'] = pd.to_datetime(df['Time'], errors='coerce')
-    # print(df['Time'].head())
+    
     # --- Convert any 'object' (string-like) columns to datetime if possible ---
 
     def looks_like_datetime(series, sample_size=5):
@@ -85,25 +84,18 @@ if uploaded_file:
                 pass  # Column is already timezone-naive or not localizable
 
 
-    # st.write("Datetime columns and sample values:")
-    # for col in df.select_dtypes(include='datetime').columns:
-    #     st.write(f"{col}: {df[col].dt.strftime('%d/%m/%Y %H:%M:%S').unique()[:5]}")
+    
     # --- Convert number-looking strings (like '1.2K', '3M') to numeric ---
     for col in df.select_dtypes(include='object').columns:
         df[col] = df[col].apply(convert_to_number)
 
-    st.write("Detected column types:")
-    st.write(df.dtypes)
+    # st.write("Detected column types:")
+    # st.write(df.dtypes)
 
 
-    st.subheader("📄 Preview of Uploaded Data")
+    st.subheader("Preview of Uploaded Data")
     st.dataframe(df.head())
-    # for col in df.columns:
-    #     if pd.api.types.is_datetime64_any_dtype(df[col]):
-    #         if hasattr(df[col].dt, 'tz'):
-    #             df[col] = df[col].dt.tz_localize(None)
-    # Filter numeric and datetime columns for axis selection
-    # valid_cols = df.select_dtypes(include=["number", "datetime64[ns]", "datetime64[ns, UTC]"]).columns.tolist()
+    
     valid_cols = []
     for col in df.columns:
         try:
@@ -124,29 +116,18 @@ if uploaded_file:
     if len(valid_cols) < 2:
         st.error("CSV must contain at least two numeric or datetime columns.")
     else:
-        x_col = st.selectbox("📈 Select X-axis column", valid_cols)
-        y_col = st.selectbox("📉 Select Y-axis column", valid_cols, index=1)
+        x_col = st.selectbox("Select X-axis column", valid_cols)
+        y_col = st.selectbox("Select Y-axis column", valid_cols, index=1)
 
-        # st.success("✅ Data loaded and parsed successfully.")
 
-        # # Convert special number formats
-        # df[x_col] = df[x_col].apply(convert_to_number) if df[x_col].dtype == 'O' else df[x_col]
-        # df[y_col] = df[y_col].apply(convert_to_number) if df[y_col].dtype == 'O' else df[y_col]
 
         # Drop NaNs
         df.dropna(subset=[x_col, y_col], inplace=True)
 
         # Clustering selection
-        algo = st.radio("Choose clustering algorithm", ("KMeans", "DBSCAN"))
+        # algo = st.radio("Choose clustering algorithm", ("KMeans", "DBSCAN"))
         data = df[[x_col, y_col]]
-        # st.subheader("🧪 Clustering Feature Selection")
-        # clustering_features = st.multiselect("Select features for clustering (use at least 2)", valid_cols, default=[x_col, y_col])
-
-        # if len(clustering_features) < 2:
-        #     st.warning("Please select at least two features for clustering.")
-        #     st.stop()
-
-        # data = df[clustering_features]
+        
 
         data_num = data.apply(pd.to_numeric, errors='coerce')
         data_num.dropna(inplace=True)
@@ -155,17 +136,17 @@ if uploaded_file:
         scaler = StandardScaler()
         scaled = scaler.fit_transform(data_num)
 
-        if algo == "KMeans":
-            k = st.slider("K (for KMeans)", 2, 10, 3)
-            model = KMeans(n_clusters=k)
-            df["Cluster"] = model.fit_predict(scaled)
-            df["Cluster"] = df["Cluster"].astype(str)
-        else:
-            eps = st.slider("eps (for DBSCAN)", 0.1, 5.0, 0.5)
-            min_samples = st.slider("min_samples (for DBSCAN)", 2, 10, 5)
-            model = DBSCAN(eps=eps, min_samples=min_samples)
-            df["Cluster"] = model.fit_predict(scaled)
-            df["Cluster"] = df["Cluster"].astype(str)
+        # if algo == "KMeans":
+        k = st.slider("K (for KMeans)", 2, 10, 3)
+        model = KMeans(n_clusters=k)
+        df["Cluster"] = model.fit_predict(scaled)
+        df["Cluster"] = df["Cluster"].astype(str)
+        # else:
+        #     eps = st.slider("eps (for DBSCAN)", 0.1, 5.0, 0.5)
+        #     min_samples = st.slider("min_samples (for DBSCAN)", 2, 10, 5)
+        #     model = DBSCAN(eps=eps, min_samples=min_samples)
+        #     df["Cluster"] = model.fit_predict(scaled)
+        #     df["Cluster"] = df["Cluster"].astype(str)
 
         df['Manual_Label'] = df['Cluster'].astype(str)
 
@@ -181,7 +162,7 @@ if uploaded_file:
 
         # Download
         st.download_button(
-            "💾 Download Labeled CSV",
+            "Download Labeled CSV",
             data=df.to_csv(index=False),
             file_name="labeled_data.csv",
             mime="text/csv"
